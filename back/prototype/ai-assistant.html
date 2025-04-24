@@ -1,0 +1,967 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI秘书</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --app-primary: #007AFF;
+            --app-secondary: #5AC8FA;
+            --app-success: #34C759;
+            --app-danger: #FF3B30;
+            --app-warning: #FF9500;
+            --app-info: #5AC8FA;
+            --app-light: #F2F2F7;
+            --app-dark: #1C1C1E;
+            --app-gray: #8E8E93;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: #F2F2F7;
+            color: #1C1C1E;
+            max-width: 430px;
+            margin: 0 auto;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        /* Status Bar */
+        .status-bar {
+            height: 44px;
+            background-color: #F2F2F7;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 16px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        
+        /* Tab Bar */
+        .tab-bar {
+            height: 83px;
+            background-color: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(10px);
+            border-top: 1px solid rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            padding-bottom: 20px;
+        }
+        
+        .tab-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: var(--app-gray);
+            font-size: 10px;
+            cursor: pointer;
+        }
+        
+        .tab-item.active {
+            color: var(--app-primary);
+        }
+        
+        .tab-icon {
+            font-size: 24px;
+            margin-bottom: 4px;
+        }
+        
+        /* Content area */
+        .content-area {
+            flex: 1;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            background-color: #F2F2F7;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        /* iOS style header */
+        .ios-header {
+            height: 44px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 16px;
+            background-color: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+            font-weight: 600;
+            font-size: 17px;
+        }
+        
+        /* Chat interface styles */
+        .chat-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .message {
+            max-width: 80%;
+            margin-bottom: 16px;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        .message-user {
+            align-self: flex-end;
+            background-color: var(--app-primary);
+            color: white;
+            border-radius: 16px 16px 4px 16px;
+            padding: 12px 16px;
+        }
+        
+        .message-assistant {
+            align-self: flex-start;
+            background-color: white;
+            border-radius: 16px 16px 16px 4px;
+            padding: 12px 16px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+        
+        /* Task card styles */
+        .task-card {
+            background-color: white;
+            border-radius: 16px;
+            padding: 16px;
+            margin: 8px 0;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            animation: slideUp 0.3s ease;
+        }
+        
+        .task-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        
+        .task-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background-color: var(--app-light);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 12px;
+            color: var(--app-primary);
+        }
+        
+        .task-title {
+            font-weight: 600;
+            font-size: 16px;
+            flex: 1;
+        }
+        
+        .task-time {
+            font-size: 14px;
+            color: var(--app-gray);
+        }
+        
+        .task-location {
+            font-size: 14px;
+            color: var(--app-gray);
+            margin-top: 4px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .task-location i {
+            margin-right: 4px;
+            font-size: 12px;
+        }
+        
+        .priority-tag {
+            font-size: 12px;
+            padding: 2px 8px;
+            border-radius: 4px;
+            margin-left: 8px;
+        }
+        
+        .priority-high {
+            background-color: rgba(255, 59, 48, 0.1);
+            color: var(--app-danger);
+        }
+        
+        .priority-medium {
+            background-color: rgba(255, 149, 0, 0.1);
+            color: var(--app-warning);
+        }
+        
+        .priority-low {
+            background-color: rgba(52, 199, 89, 0.1);
+            color: var(--app-success);
+        }
+        
+        .subtasks {
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid var(--app-light);
+        }
+        
+        .subtask-item {
+            display: flex;
+            align-items: center;
+            padding: 8px 0;
+            font-size: 14px;
+            color: var(--app-dark);
+        }
+        
+        .subtask-item i {
+            margin-right: 8px;
+            font-size: 12px;
+            color: var(--app-gray);
+        }
+        
+        .import-button {
+            background-color: var(--app-primary);
+            color: white;
+            border-radius: 8px;
+            padding: 12px;
+            text-align: center;
+            font-weight: 600;
+            margin-top: 12px;
+        }
+        
+        /* Input area styles */
+        .input-container {
+            background-color: white;
+            border-top: 1px solid rgba(0, 0, 0, 0.1);
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .mic-button {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background-color: var(--app-primary);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-size: 16px;
+        }
+        
+        .mic-button.recording {
+            background-color: var(--app-danger);
+            animation: pulse 1.5s infinite;
+        }
+        
+        .input-field {
+            flex: 1;
+            padding: 8px 12px;
+            border-radius: 16px;
+            background-color: var(--app-light);
+            border: none;
+            font-size: 16px;
+        }
+        
+        .send-button {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--app-primary);
+            font-size: 16px;
+        }
+        
+        /* Toast notification */
+        .toast {
+            position: fixed;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 24px;
+            font-size: 14px;
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        .toast.active {
+            display: flex;
+            align-items: center;
+        }
+        
+        .toast i {
+            margin-right: 8px;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        @keyframes slideUp {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+        
+        /* Settings Modal */
+        .settings-modal {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background-color: white;
+            border-radius: 20px 20px 0 0;
+            padding: 20px;
+            transform: translateY(100%);
+            transition: transform 0.3s ease;
+            z-index: 1000;
+            max-width: 430px;
+            margin: 0 auto;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .settings-modal.active {
+            transform: translateY(0);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-title {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .close-button {
+            color: var(--app-gray);
+            font-size: 24px;
+        }
+
+        .settings-section {
+            margin-bottom: 24px;
+        }
+
+        .settings-section-title {
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: var(--app-dark);
+        }
+
+        .settings-description {
+            font-size: 14px;
+            color: var(--app-gray);
+            margin-bottom: 16px;
+            line-height: 1.4;
+        }
+
+        .audio-upload {
+            border: 2px dashed var(--app-light);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .audio-upload:hover {
+            border-color: var(--app-primary);
+            background-color: rgba(0, 122, 255, 0.05);
+        }
+
+        .audio-upload i {
+            font-size: 32px;
+            color: var(--app-primary);
+            margin-bottom: 12px;
+        }
+
+        .upload-text {
+            font-size: 14px;
+            color: var(--app-gray);
+        }
+
+        .audio-preview {
+            background-color: var(--app-light);
+            border-radius: 12px;
+            padding: 16px;
+            margin-top: 16px;
+            display: none;
+        }
+
+        .audio-preview.active {
+            display: block;
+        }
+
+        .audio-controls {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .audio-play {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: var(--app-primary);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+        }
+
+        .audio-info {
+            flex: 1;
+        }
+
+        .audio-name {
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+
+        .audio-duration {
+            font-size: 12px;
+            color: var(--app-gray);
+        }
+
+        .voice-examples {
+            margin-top: 16px;
+        }
+
+        .voice-example {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            background-color: var(--app-light);
+            border-radius: 8px;
+            margin-bottom: 8px;
+            cursor: pointer;
+        }
+
+        .voice-example:last-child {
+            margin-bottom: 0;
+        }
+
+        .voice-example i {
+            margin-right: 12px;
+            color: var(--app-primary);
+        }
+
+        .voice-example-text {
+            flex: 1;
+            font-size: 14px;
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+            z-index: 999;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .generate-button {
+            background-color: var(--app-primary);
+            color: white;
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
+            font-weight: 600;
+            margin-top: 20px;
+            width: 100%;
+        }
+
+        .generate-button:disabled {
+            background-color: var(--app-gray);
+            cursor: not-allowed;
+        }
+
+        /* Loading animation */
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        .loading-spinner {
+            border: 3px solid var(--app-light);
+            border-top: 3px solid var(--app-primary);
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 12px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <!-- Status Bar -->
+    <div class="status-bar">
+        <div>9:41</div>
+        <div class="flex items-center space-x-2">
+            <i class="fas fa-signal"></i>
+            <i class="fas fa-wifi"></i>
+            <i class="fas fa-battery-full"></i>
+        </div>
+    </div>
+    
+    <!-- Header -->
+    <div class="ios-header">
+        <div>AI秘书</div>
+        <div class="text-blue-500" id="settingsButton">
+            <i class="fas fa-cog"></i>
+        </div>
+    </div>
+    
+    <!-- Content Area -->
+    <div class="content-area">
+        <div class="chat-container">
+            <!-- Assistant welcome message -->
+            <div class="message message-assistant">
+                你好！我是你的AI秘书。我可以帮你安排日程、拆解任务，让工作生活更有条理。告诉我你的计划，我会帮你整理并提醒。
+            </div>
+            
+            <!-- Example task card -->
+            <div class="task-card">
+                <div class="task-header">
+                    <div class="task-icon">
+                        <i class="fas fa-calendar-day"></i>
+                    </div>
+                    <div class="task-title">产品评审会议</div>
+                    <span class="priority-tag priority-high">重要</span>
+                </div>
+                
+                <div class="task-time">
+                    <i class="far fa-clock"></i> 11:00 - 12:00
+                </div>
+                
+                <div class="task-location">
+                    <i class="fas fa-map-marker-alt"></i> 会议室A
+                </div>
+                
+                <div class="subtasks">
+                    <div class="subtask-item">
+                        <i class="fas fa-circle"></i>
+                        准备演示文稿
+                    </div>
+                    <div class="subtask-item">
+                        <i class="fas fa-circle"></i>
+                        收集用户反馈数据
+                    </div>
+                    <div class="subtask-item">
+                        <i class="fas fa-circle"></i>
+                        整理迭代计划
+                    </div>
+                </div>
+                
+                <button class="import-button">
+                    确认导入
+                </button>
+            </div>
+        </div>
+        
+        <!-- Input area -->
+        <div class="input-container">
+            <button class="mic-button" id="micButton">
+                <i class="fas fa-microphone"></i>
+            </button>
+            <input type="text" class="input-field" placeholder="输入文字或按住说话..." id="messageInput">
+            <button class="send-button" id="sendButton">
+                <i class="fas fa-paper-plane"></i>
+            </button>
+        </div>
+    </div>
+    
+    <!-- Toast notification -->
+    <div class="toast" id="toast">
+        <i class="fas fa-check-circle"></i>
+        <span>任务已成功导入！</span>
+    </div>
+    
+    <!-- Tab Bar -->
+    <div class="tab-bar">
+        <a href="tasks.html" class="tab-item">
+            <div class="tab-icon"><i class="fas fa-tasks"></i></div>
+            <div>任务</div>
+        </a>
+        <a href="habits.html" class="tab-item">
+            <div class="tab-icon"><i class="fas fa-calendar-check"></i></div>
+            <div>习惯</div>
+        </a>
+        <a href="ai-assistant.html" class="tab-item active">
+            <div class="tab-icon"><i class="fas fa-robot"></i></div>
+            <div>AI秘书</div>
+        </a>
+        <a href="calendar.html" class="tab-item">
+            <div class="tab-icon"><i class="fas fa-calendar"></i></div>
+            <div>日历</div>
+        </a>
+        <a href="stats.html" class="tab-item">
+            <div class="tab-icon"><i class="fas fa-chart-pie"></i></div>
+            <div>统计</div>
+        </a>
+    </div>
+    
+    <!-- Settings Modal for CosyVoice Integration -->
+    <div class="modal-overlay" id="modalOverlay"></div>
+    <div class="settings-modal" id="settingsModal">
+        <div class="modal-header">
+            <div class="modal-title">语音设置</div>
+            <button class="close-button" id="closeSettings">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <div class="settings-section">
+            <div class="settings-section-title">个性化语音</div>
+            <div class="settings-description">
+                上传10-20秒的语音示例，AI将为您生成相似的语音风格，用于任务完成时的鼓励提示。
+            </div>
+
+            <div class="audio-upload" for="audioUpload">
+                <input type="file" id="audioUpload" accept="audio/*" style="display: none;">
+                <i class="fas fa-cloud-upload-alt"></i>
+                <div class="upload-text">点击或拖拽音频文件</div>
+                <div class="upload-text">(支持 MP3, WAV 格式，10-20秒)</div>
+            </div>
+
+            <div class="audio-preview" id="audioPreview">
+                <div class="audio-controls">
+                    <button class="audio-play" id="audioPlayButton">
+                        <i class="fas fa-play"></i>
+                    </button>
+                    <div class="audio-info">
+                        <div class="audio-name">示例音频.mp3</div>
+                        <div class="audio-duration">00:15</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="loading" id="loading">
+                <div class="loading-spinner"></div>
+                <div>正在生成个性化语音...</div>
+            </div>
+
+            <button class="generate-button" id="generateButton" disabled>
+                生成个性化语音
+            </button>
+        </div>
+
+        <div class="settings-section">
+            <div class="settings-section-title">语音示例</div>
+            <div class="settings-description">
+                点击播放对应场景下的语音提示效果
+            </div>
+
+            <div class="voice-examples">
+                <div class="voice-example" data-text="太棒了！你今天完成了所有任务！">
+                    <i class="fas fa-check-circle"></i>
+                    <div class="voice-example-text">任务完成鼓励</div>
+                </div>
+                <div class="voice-example" data-text="还有几项任务未完成，加油！">
+                    <i class="fas fa-heart"></i>
+                    <div class="voice-example-text">任务未完成提示</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const micButton = document.getElementById('micButton');
+        const messageInput = document.getElementById('messageInput');
+        const sendButton = document.getElementById('sendButton');
+        const chatContainer = document.querySelector('.chat-container');
+        const toast = document.getElementById('toast');
+        const settingsButton = document.getElementById('settingsButton');
+        const settingsModal = document.getElementById('settingsModal');
+        const modalOverlay = document.getElementById('modalOverlay');
+        const closeSettings = document.getElementById('closeSettings');
+        const audioUpload = document.getElementById('audioUpload');
+        const audioPreview = document.getElementById('audioPreview');
+        const audioPlayButton = document.getElementById('audioPlayButton');
+        const generateButton = document.getElementById('generateButton');
+        const loading = document.getElementById('loading');
+        
+        // Handle microphone button
+        micButton.addEventListener('click', function() {
+            this.classList.toggle('recording');
+            
+            if (this.classList.contains('recording')) {
+                // Simulate recording
+                setTimeout(() => {
+                    this.classList.remove('recording');
+                    addMessage('用户', '11点产品评审会议，下午3点和客户开会，晚上7点健身');
+                    setTimeout(() => {
+                        addTaskCard();
+                    }, 800);
+                }, 2000);
+            }
+        });
+        
+        // Handle send button
+        sendButton.addEventListener('click', function() {
+            const message = messageInput.value.trim();
+            if (message) {
+                addMessage('用户', message);
+                messageInput.value = '';
+                
+                // Simulate AI response
+                setTimeout(() => {
+                    if (message.includes('会议') || message.includes('安排')) {
+                        addTaskCard();
+                    } else {
+                        addMessage('助手', '我已了解你的需求。是否需要我帮你设置提醒或安排日程？');
+                    }
+                }, 800);
+            }
+        });
+        
+        // Handle message input enter key
+        messageInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendButton.click();
+            }
+        });
+        
+        // Add message to chat
+        function addMessage(sender, text) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message message-${sender === '用户' ? 'user' : 'assistant'}`;
+            messageDiv.textContent = text;
+            chatContainer.appendChild(messageDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+        
+        // Add task card
+        function addTaskCard() {
+            // Randomly choose one of 3 task types
+            const taskTypes = [
+                {
+                    title: '产品评审会议',
+                    icon: 'calendar-day',
+                    time: '11:00 - 12:00',
+                    location: '会议室A',
+                    priority: 'priority-high',
+                    priorityText: '重要',
+                    subtasks: ['准备演示文稿', '收集用户反馈数据', '整理迭代计划']
+                },
+                {
+                    title: '客户沟通会议',
+                    icon: 'users',
+                    time: '15:00 - 16:00',
+                    location: '线上会议',
+                    priority: 'priority-medium',
+                    priorityText: '中等',
+                    subtasks: ['准备项目进度报告', '收集客户需求', '安排下次会议']
+                },
+                {
+                    title: '健身',
+                    icon: 'dumbbell',
+                    time: '19:00 - 20:00',
+                    location: '健身中心',
+                    priority: 'priority-low',
+                    priorityText: '普通',
+                    subtasks: ['30分钟有氧', '20分钟力量训练', '10分钟拉伸']
+                }
+            ];
+            
+            const taskType = taskTypes[Math.floor(Math.random() * taskTypes.length)];
+            
+            const taskCard = document.createElement('div');
+            taskCard.className = 'task-card';
+            taskCard.innerHTML = `
+                <div class="task-header">
+                    <div class="task-icon">
+                        <i class="fas fa-${taskType.icon}"></i>
+                    </div>
+                    <div class="task-title">${taskType.title}</div>
+                    <span class="priority-tag ${taskType.priority}">${taskType.priorityText}</span>
+                </div>
+                
+                <div class="task-time">
+                    <i class="far fa-clock"></i> ${taskType.time}
+                </div>
+                
+                <div class="task-location">
+                    <i class="fas fa-map-marker-alt"></i> ${taskType.location}
+                </div>
+                
+                <div class="subtasks">
+                    ${taskType.subtasks.map(subtask => `
+                        <div class="subtask-item">
+                            <i class="fas fa-circle"></i>
+                            ${subtask}
+                        </div>
+                    `).join('')}
+                </div>
+                
+                <button class="import-button">
+                    确认导入
+                </button>
+            `;
+            
+            chatContainer.appendChild(taskCard);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+            
+            // Handle import button click
+            const importButton = taskCard.querySelector('.import-button');
+            importButton.addEventListener('click', function() {
+                showToast('任务已成功导入！');
+                this.textContent = '已导入';
+                this.style.backgroundColor = 'var(--app-success)';
+                this.disabled = true;
+                
+                // Add confirmation message from assistant
+                setTimeout(() => {
+                    addMessage('助手', `已将"${taskType.title}"添加到你的日程中，并设置提醒。`);
+                }, 500);
+            });
+        }
+        
+        // Show toast notification
+        function showToast(message) {
+            toast.querySelector('span').textContent = message;
+            toast.classList.add('active');
+            
+            setTimeout(() => {
+                toast.classList.remove('active');
+            }, 2000);
+        }
+        
+        // Settings modal functionality
+        // Open settings modal
+        settingsButton.addEventListener('click', () => {
+            settingsModal.classList.add('active');
+            modalOverlay.classList.add('active');
+        });
+
+        // Close settings modal
+        function closeModal() {
+            settingsModal.classList.remove('active');
+            modalOverlay.classList.remove('active');
+        }
+
+        closeSettings.addEventListener('click', closeModal);
+        modalOverlay.addEventListener('click', closeModal);
+
+        // Handle audio file upload
+        audioUpload.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const audio = new Audio(URL.createObjectURL(file));
+                audio.addEventListener('loadedmetadata', () => {
+                    const duration = Math.round(audio.duration);
+                    if (duration >= 10 && duration <= 20) {
+                        audioPreview.classList.add('active');
+                        audioPreview.querySelector('.audio-name').textContent = file.name;
+                        audioPreview.querySelector('.audio-duration').textContent = 
+                            `${Math.floor(duration / 60)}:${(duration % 60).toString().padStart(2, '0')}`;
+                        generateButton.disabled = false;
+                    } else {
+                        alert('请上传10-20秒的音频文件');
+                        audioUpload.value = '';
+                    }
+                });
+            }
+        });
+
+        // Handle audio preview playback
+        let isPlaying = false;
+        audioPlayButton.addEventListener('click', () => {
+            const icon = audioPlayButton.querySelector('i');
+            if (isPlaying) {
+                icon.className = 'fas fa-play';
+            } else {
+                icon.className = 'fas fa-pause';
+            }
+            isPlaying = !isPlaying;
+        });
+
+        // Handle voice generation
+        generateButton.addEventListener('click', async () => {
+            loading.classList.add('active');
+            generateButton.disabled = true;
+
+            // Simulate API call to CosyVoice
+            setTimeout(() => {
+                loading.classList.remove('active');
+                showToast('个性化语音生成成功！');
+                closeModal();
+            }, 3000);
+        });
+
+        // Handle voice examples
+        document.querySelectorAll('.voice-example').forEach(example => {
+            example.addEventListener('click', () => {
+                const text = example.dataset.text;
+                // Here you would normally play the generated voice
+                // For now, we'll just show a toast
+                showToast(`🔊 ${text}`);
+            });
+        });
+        
+        // Make buttons respond to clicks with scale animation
+        document.querySelectorAll('button, .tab-item, .import-button, .voice-example').forEach(button => {
+            button.addEventListener('touchstart', () => {
+                button.classList.add('btn-active');
+            });
+            
+            button.addEventListener('touchend', () => {
+                setTimeout(() => {
+                    button.classList.remove('btn-active');
+                }, 200);
+            });
+            
+            // For desktop testing
+            button.addEventListener('mousedown', () => {
+                button.classList.add('btn-active');
+            });
+            
+            button.addEventListener('mouseup', () => {
+                setTimeout(() => {
+                    button.classList.remove('btn-active');
+                }, 200);
+            });
+        });
+    </script>
+</body>
+</html> 

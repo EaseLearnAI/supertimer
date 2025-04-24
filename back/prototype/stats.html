@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>统计</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --app-primary: #007AFF;
+            --app-secondary: #5AC8FA;
+            --app-success: #34C759;
+            --app-danger: #FF3B30;
+            --app-warning: #FF9500;
+            --app-info: #5AC8FA;
+            --app-light: #F2F2F7;
+            --app-dark: #1C1C1E;
+            --app-gray: #8E8E93;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: #F2F2F7;
+            color: #1C1C1E;
+            max-width: 430px;
+            margin: 0 auto;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            font-size: 16px;
+            line-height: 1.5;
+        }
+        
+        /* Status Bar */
+        .status-bar {
+            height: 44px;
+            background-color: #F2F2F7;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 16px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        
+        /* Tab Bar */
+        .tab-bar {
+            height: 83px;
+            background-color: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(10px);
+            border-top: 1px solid rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            padding-bottom: 20px; /* For home bar */
+        }
+        
+        .tab-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: var(--app-gray);
+            font-size: 10px;
+            cursor: pointer;
+            transition: color 0.2s ease;
+        }
+        
+        .tab-item.active {
+            color: var(--app-primary);
+        }
+        
+        .tab-icon {
+            font-size: 24px;
+            margin-bottom: 4px;
+        }
+        
+        /* Content area */
+        .content-area {
+            flex: 1;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            padding: 16px;
+        }
+        
+        /* iOS style header */
+        .ios-header {
+            height: 44px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            font-weight: 600;
+            font-size: 17px;
+            background-color: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+        }
+        
+        /* Animation classes */
+        .btn-active {
+            transform: scale(0.95);
+            transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.3s ease forwards;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        .slide-up {
+            animation: slideUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+        
+        @keyframes slideUp {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
+        
+        /* Stats specific styles */
+        .stat-card {
+            background-color: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 16px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            animation: fadeIn 0.6s ease forwards;
+            animation-delay: calc(var(--index) * 0.1s);
+            opacity: 0;
+        }
+        
+        .stat-card:nth-child(1) {
+            --index: 0;
+        }
+        
+        .stat-card:nth-child(2) {
+            --index: 1;
+        }
+        
+        .stat-card:nth-child(3) {
+            --index: 2;
+        }
+        
+        .stat-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        
+        .stat-title {
+            font-weight: 600;
+            font-size: 18px;
+        }
+        
+        .stat-action {
+            color: var(--app-primary);
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .stat-action:active {
+            transform: scale(0.95);
+        }
+        
+        .time-range {
+            display: flex;
+            background-color: var(--app-light);
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: 16px;
+        }
+        
+        .time-option {
+            flex: 1;
+            text-align: center;
+            padding: 8px 0;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background-color 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        
+        .time-option.active {
+            background-color: white;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+            font-weight: 600;
+        }
+        
+        .metric-cards {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+        
+        .metric-card {
+            background-color: white;
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            animation: fadeIn 0.6s ease forwards;
+            animation-delay: calc(var(--index) * 0.1s);
+            opacity: 0;
+        }
+        
+        .metric-card:nth-child(1) {
+            --index: 0.5;
+        }
+        
+        .metric-card:nth-child(2) {
+            --index: 0.7;
+        }
+        
+        .metric-card:nth-child(3) {
+            --index: 0.9;
+        }
+        
+        .metric-icon {
+            margin-bottom: 8px;
+        }
+        
+        .metric-value {
+            font-size: 24px;
+            font-weight: 700;
+            margin: 8px 0;
+        }
+        
+        .metric-label {
+            font-size: 12px;
+            color: var(--app-gray);
+        }
+        
+        .chart-container {
+            position: relative;
+            margin: 20px 0;
+            height: 200px;
+            opacity: 0;
+            animation: fadeIn 0.8s ease forwards;
+            animation-delay: 0.2s;
+        }
+        
+        .chart-legend {
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+            margin-top: 16px;
+            opacity: 0;
+            animation: fadeIn 0.8s ease forwards;
+            animation-delay: 0.4s;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            font-size: 14px;
+        }
+        
+        .legend-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 2px;
+            margin-right: 6px;
+        }
+        
+        .export-button {
+            background-color: var(--app-primary);
+            color: white;
+            border-radius: 12px;
+            padding: 14px;
+            text-align: center;
+            font-weight: 600;
+            margin-top: 16px;
+            transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+            animation: fadeIn 0.8s ease forwards;
+            animation-delay: 0.6s;
+            opacity: 0;
+        }
+        
+        .export-button:active {
+            transform: scale(0.98);
+        }
+        
+        /* Responsive adjustments */
+        @media (min-width: 768px) {
+            body {
+                max-width: 500px;
+            }
+        }
+        
+        @media (min-width: 1024px) {
+            body {
+                max-width: 600px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Status Bar -->
+    <div class="status-bar">
+        <div>9:41</div>
+        <div class="flex items-center space-x-2">
+            <i class="fas fa-signal"></i>
+            <i class="fas fa-wifi"></i>
+            <i class="fas fa-battery-full"></i>
+        </div>
+    </div>
+    
+    <!-- Header -->
+    <div class="ios-header">
+        <div class="ios-header-title">统计</div>
+    </div>
+    
+    <!-- Content Area -->
+    <div class="content-area">
+        <!-- Today's Summary -->
+        <div class="stat-card">
+            <div class="stat-header">
+                <div class="stat-title">今日概览</div>
+                <div class="stat-action">查看详情</div>
+            </div>
+            
+            <div class="metric-cards">
+                <div class="metric-card">
+                    <div class="metric-icon text-blue-500">
+                        <i class="fas fa-tasks"></i>
+                    </div>
+                    <div class="metric-value">6</div>
+                    <div class="metric-label">完成任务</div>
+                </div>
+                
+                <div class="metric-card">
+                    <div class="metric-icon text-purple-500">
+                        <i class="fas fa-calendar-check"></i>
+                    </div>
+                    <div class="metric-value">3</div>
+                    <div class="metric-label">习惯打卡</div>
+                </div>
+                
+                <div class="metric-card">
+                    <div class="metric-icon text-orange-500">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <div class="metric-value">2.5h</div>
+                    <div class="metric-label">专注时间</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Weekly Trends -->
+        <div class="stat-card">
+            <div class="stat-header">
+                <div class="stat-title">周趋势</div>
+                <div class="time-range">
+                    <div class="time-option active" data-range="week">周</div>
+                    <div class="time-option" data-range="month">月</div>
+                    <div class="time-option" data-range="year">年</div>
+                </div>
+            </div>
+            
+            <div class="chart-container">
+                <canvas id="weeklyChart"></canvas>
+            </div>
+            
+            <div class="chart-legend">
+                <div class="legend-item">
+                    <div class="legend-color" style="background-color: #007AFF;"></div>
+                    <div>任务</div>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background-color: #AF52DE;"></div>
+                    <div>习惯</div>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background-color: #FF9500;"></div>
+                    <div>专注</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Monthly Summary -->
+        <div class="stat-card">
+            <div class="stat-header">
+                <div class="stat-title">月度汇总</div>
+            </div>
+            
+            <div class="chart-container">
+                <canvas id="monthlyChart"></canvas>
+            </div>
+        </div>
+        
+        <!-- Export Button -->
+        <div class="export-button">
+            导出统计报告
+        </div>
+    </div>
+    
+    <!-- Tab Bar -->
+    <div class="tab-bar">
+        <a href="tasks.html" class="tab-item">
+            <div class="tab-icon"><i class="fas fa-tasks"></i></div>
+            <div>任务</div>
+        </a>
+        <a href="habits.html" class="tab-item">
+            <div class="tab-icon"><i class="fas fa-calendar-check"></i></div>
+            <div>习惯</div>
+        </a>
+        <a href="ai-assistant.html" class="tab-item">
+            <div class="tab-icon"><i class="fas fa-robot"></i></div>
+            <div>AI秘书</div>
+        </a>
+        <a href="calendar.html" class="tab-item">
+            <div class="tab-icon"><i class="fas fa-calendar"></i></div>
+            <div>日历</div>
+        </a>
+        <a href="stats.html" class="tab-item active">
+            <div class="tab-icon"><i class="fas fa-chart-pie"></i></div>
+            <div>统计</div>
+        </a>
+    </div>
+    
+    <script>
+        // Weekly Trends Chart
+        function initWeeklyChart() {
+            const ctx = document.getElementById('weeklyChart').getContext('2d');
+            
+            const weeklyChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['周一', '周二', '周三', '周四', '周五', '周六', '周日'],
+                    datasets: [
+                        {
+                            label: '任务',
+                            data: [5, 7, 4, 6, 8, 3, 6],
+                            borderColor: '#007AFF',
+                            backgroundColor: 'rgba(0, 122, 255, 0.1)',
+                            tension: 0.3,
+                            fill: true
+                        },
+                        {
+                            label: '习惯',
+                            data: [3, 3, 2, 4, 3, 2, 3],
+                            borderColor: '#AF52DE',
+                            backgroundColor: 'rgba(175, 82, 222, 0.1)',
+                            tension: 0.3,
+                            fill: true
+                        },
+                        {
+                            label: '专注时间(小时)',
+                            data: [2.5, 3, 1.5, 4, 3.5, 1, 2.5],
+                            borderColor: '#FF9500',
+                            backgroundColor: 'rgba(255, 149, 0, 0.1)',
+                            tension: 0.3,
+                            fill: true
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                display: false
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            }
+                        }
+                    },
+                    animation: {
+                        duration: 1500,
+                        easing: 'easeOutQuart'
+                    }
+                }
+            });
+            
+            // Return chart instance so we can access it later
+            return weeklyChart;
+        }
+        
+        // Monthly Summary Chart
+        function initMonthlyChart() {
+            const ctx = document.getElementById('monthlyChart').getContext('2d');
+            
+            const monthlyChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['任务完成率', '习惯坚持率', '专注效率'],
+                    datasets: [
+                        {
+                            label: '目标',
+                            data: [100, 100, 100],
+                            backgroundColor: 'rgba(142, 142, 147, 0.2)',
+                            borderRadius: 6
+                        },
+                        {
+                            label: '实际',
+                            data: [75, 85, 65],
+                            backgroundColor: [
+                                '#007AFF',
+                                '#AF52DE',
+                                '#FF9500'
+                            ],
+                            borderRadius: 6
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    indexAxis: 'y',
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return context.dataset.label + ': ' + context.parsed.x + '%';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            max: 100,
+                            ticks: {
+                                callback: function(value) {
+                                    return value + '%';
+                                }
+                            },
+                            grid: {
+                                display: false
+                            }
+                        },
+                        y: {
+                            grid: {
+                                display: false
+                            }
+                        }
+                    },
+                    animation: {
+                        duration: 1500,
+                        easing: 'easeOutQuart',
+                        delay: function(context) {
+                            return context.dataIndex * 300;
+                        }
+                    }
+                }
+            });
+            
+            return monthlyChart;
+        }
+        
+        // Initialize charts when DOM is loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            const weeklyChart = initWeeklyChart();
+            const monthlyChart = initMonthlyChart();
+            
+            // Time range switching
+            document.querySelectorAll('.time-option').forEach(option => {
+                option.addEventListener('click', function() {
+                    document.querySelectorAll('.time-option').forEach(o => o.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    const range = this.getAttribute('data-range');
+                    
+                    // Update chart data based on selected range (for demo purposes just animate again)
+                    if (range === 'week') {
+                        weeklyChart.data.labels = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+                    } else if (range === 'month') {
+                        weeklyChart.data.labels = ['第1周', '第2周', '第3周', '第4周'];
+                    } else {
+                        weeklyChart.data.labels = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
+                    }
+                    
+                    weeklyChart.update('normal');
+                });
+            });
+            
+            // Export button
+            document.querySelector('.export-button').addEventListener('click', function() {
+                this.innerHTML = '<i class="fas fa-check-circle mr-2"></i> 报告已导出';
+                this.style.backgroundColor = 'var(--app-success)';
+                
+                setTimeout(() => {
+                    this.innerHTML = '导出统计报告';
+                    this.style.backgroundColor = 'var(--app-primary)';
+                }, 2000);
+            });
+        });
+        
+        // Make buttons respond to clicks with scale animation
+        document.querySelectorAll('button, .time-option, .tab-item, .stat-action, .export-button').forEach(button => {
+            button.addEventListener('touchstart', () => {
+                button.classList.add('btn-active');
+            });
+            
+            button.addEventListener('touchend', () => {
+                setTimeout(() => {
+                    button.classList.remove('btn-active');
+                }, 200);
+            });
+            
+            // For desktop testing
+            button.addEventListener('mousedown', () => {
+                button.classList.add('btn-active');
+            });
+            
+            button.addEventListener('mouseup', () => {
+                setTimeout(() => {
+                    button.classList.remove('btn-active');
+                }, 200);
+            });
+        });
+    </script>
+</body>
+</html> 

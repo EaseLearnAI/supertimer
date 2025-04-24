@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>习惯</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --app-primary: #007AFF;
+            --app-secondary: #5AC8FA;
+            --app-success: #34C759;
+            --app-danger: #FF3B30;
+            --app-warning: #FF9500;
+            --app-info: #5AC8FA;
+            --app-light: #F2F2F7;
+            --app-dark: #1C1C1E;
+            --app-gray: #8E8E93;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: #F2F2F7;
+            color: #1C1C1E;
+            max-width: 430px;
+            margin: 0 auto;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        /* Status Bar */
+        .status-bar {
+            height: 44px;
+            background-color: #F2F2F7;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 16px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        
+        /* Tab Bar */
+        .tab-bar {
+            height: 83px;
+            background-color: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(10px);
+            border-top: 1px solid rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            padding-bottom: 20px; /* For home bar */
+        }
+        
+        .tab-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: var(--app-gray);
+            font-size: 10px;
+            cursor: pointer;
+        }
+        
+        .tab-item.active {
+            color: var(--app-primary);
+        }
+        
+        .tab-icon {
+            font-size: 24px;
+            margin-bottom: 4px;
+        }
+        
+        /* Content area */
+        .content-area {
+            flex: 1;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        
+        /* iOS style header */
+        .ios-header {
+            height: 44px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            font-weight: 600;
+            font-size: 17px;
+            background-color: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+        }
+        
+        .ios-header-action {
+            position: absolute;
+            font-size: 17px;
+        }
+        
+        .ios-header-left {
+            left: 16px;
+        }
+        
+        .ios-header-right {
+            right: 16px;
+            color: var(--app-primary);
+        }
+        
+        /* Animation classes */
+        .btn-active {
+            transform: scale(0.95);
+            transition: transform 0.2s ease;
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.3s ease forwards;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        .slide-up {
+            animation: slideUp 0.3s ease forwards;
+        }
+        
+        @keyframes slideUp {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
+        
+        /* Habits specific styles */
+        .habit-section {
+            margin: 16px 0;
+        }
+        
+        .section-header {
+            padding: 12px 16px;
+            font-weight: 600;
+            color: var(--app-gray);
+            font-size: 15px;
+        }
+        
+        .habit-card {
+            background-color: white;
+            border-radius: 12px;
+            margin: 8px 16px;
+            padding: 16px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+        
+        .habit-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        
+        .habit-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 12px;
+            color: white;
+            font-size: 18px;
+        }
+        
+        .habit-info {
+            flex: 1;
+        }
+        
+        .habit-name {
+            font-weight: 600;
+            font-size: 16px;
+            margin-bottom: 4px;
+        }
+        
+        .habit-streak {
+            font-size: 13px;
+            color: var(--app-gray);
+        }
+        
+        .habit-streak span {
+            color: var(--app-dark);
+            font-weight: 500;
+        }
+        
+        .habit-progress {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-top: 16px;
+        }
+        
+        .progress-bar {
+            height: 4px;
+            background-color: var(--app-light);
+            border-radius: 2px;
+            flex: 1;
+            overflow: hidden;
+            margin-right: 12px;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            border-radius: 2px;
+            transition: width 0.3s ease;
+        }
+        
+        .progress-percent {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--app-dark);
+        }
+        
+        .habit-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+        }
+        
+        .habit-button {
+            flex: 1;
+            background-color: var(--app-light);
+            border-radius: 8px;
+            padding: 10px 0;
+            text-align: center;
+            font-size: 14px;
+            color: var(--app-dark);
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+        
+        .habit-button.primary {
+            background-color: var(--app-primary);
+            color: white;
+        }
+        
+        .active-week {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 16px;
+        }
+        
+        .day-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-size: 12px;
+        }
+        
+        .day-circle {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background-color: var(--app-light);
+            margin: 4px 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 500;
+        }
+        
+        .day-circle.today {
+            border: 2px solid var(--app-primary);
+        }
+        
+        .day-circle.completed {
+            background-color: var(--app-success);
+            color: white;
+        }
+        
+        .day-name {
+            color: var(--app-gray);
+        }
+        
+        /* Modal styles */
+        .modal {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background-color: white;
+            border-radius: 16px 16px 0 0;
+            padding: 20px;
+            box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.1);
+            transform: translateY(100%);
+            transition: transform 0.3s ease;
+            z-index: 1000;
+            max-width: 430px;
+            margin: 0 auto;
+        }
+        
+        .modal.active {
+            transform: translateY(0);
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .modal-title {
+            font-size: 18px;
+            font-weight: 600;
+        }
+        
+        .close-button {
+            color: var(--app-gray);
+        }
+        
+        .form-group {
+            margin-bottom: 16px;
+        }
+        
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            font-size: 15px;
+        }
+        
+        .form-input {
+            width: 100%;
+            padding: 12px;
+            background-color: var(--app-light);
+            border-radius: 8px;
+            border: none;
+            font-size: 16px;
+        }
+        
+        .color-options {
+            display: flex;
+            gap: 12px;
+            margin-top: 8px;
+        }
+        
+        .color-option {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+        
+        .color-option.selected {
+            box-shadow: 0 0 0 2px white, 0 0 0 4px var(--app-primary);
+        }
+        
+        .form-button {
+            width: 100%;
+            padding: 14px 0;
+            background-color: var(--app-primary);
+            color: white;
+            font-weight: 600;
+            border-radius: 10px;
+            text-align: center;
+            margin-top: 20px;
+        }
+        
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+            z-index: 999;
+        }
+        
+        .overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+    </style>
+</head>
+<body>
+    <!-- Status Bar -->
+    <div class="status-bar">
+        <div>9:41</div>
+        <div class="flex items-center space-x-2">
+            <i class="fas fa-signal"></i>
+            <i class="fas fa-wifi"></i>
+            <i class="fas fa-battery-full"></i>
+        </div>
+    </div>
+    
+    <!-- Header -->
+    <div class="ios-header">
+        <div class="ios-header-title">习惯</div>
+        <div class="ios-header-action ios-header-right" id="addHabitButton">
+            <i class="fas fa-plus"></i>
+        </div>
+    </div>
+    
+    <!-- Content Area -->
+    <div class="content-area">
+        <div class="habit-section">
+            <div class="section-header">今日</div>
+            
+            <!-- Reading Habit -->
+            <div class="habit-card fade-in">
+                <div class="habit-header">
+                    <div class="habit-icon" style="background-color: #5AC8FA;">
+                        <i class="fas fa-book"></i>
+                    </div>
+                    <div class="habit-info">
+                        <div class="habit-name">阅读</div>
+                        <div class="habit-streak">已坚持 <span>28</span> 天</div>
+                    </div>
+                </div>
+                
+                <div class="active-week">
+                    <div class="day-item">
+                        <div class="day-name">一</div>
+                        <div class="day-circle completed">
+                            <i class="fas fa-check"></i>
+                        </div>
+                    </div>
+                    <div class="day-item">
+                        <div class="day-name">二</div>
+                        <div class="day-circle completed">
+                            <i class="fas fa-check"></i>
+                        </div>
+                    </div>
+                    <div class="day-item">
+                        <div class="day-name">三</div>
+                        <div class="day-circle today completed">
+                            <i class="fas fa-check"></i>
+                        </div>
+                    </div>
+                    <div class="day-item">
+                        <div class="day-name">四</div>
+                        <div class="day-circle">4</div>
+                    </div>
+                    <div class="day-item">
+                        <div class="day-name">五</div>
+                        <div class="day-circle">5</div>
+                    </div>
+                    <div class="day-item">
+                        <div class="day-name">六</div>
+                        <div class="day-circle">6</div>
+                    </div>
+                    <div class="day-item">
+                        <div class="day-name">日</div>
+                        <div class="day-circle">7</div>
+                    </div>
+                </div>
+                
+                <div class="habit-actions">
+                    <button class="habit-button">跳过</button>
+                    <button class="habit-button primary">完成</button>
+                </div>
+            </div>
+            
+            <!-- Exercise Habit -->
+            <div class="habit-card fade-in">
+                <div class="habit-header">
+                    <div class="habit-icon" style="background-color: #FF9500;">
+                        <i class="fas fa-running"></i>
+                    </div>
+                    <div class="habit-info">
+                        <div class="habit-name">锻炼</div>
+                        <div class="habit-streak">已坚持 <span>15</span> 天</div>
+                    </div>
+                </div>
+                
+                <div class="active-week">
+                    <div class="day-item">
+                        <div class="day-name">一</div>
+                        <div class="day-circle completed">
+                            <i class="fas fa-check"></i>
+                        </div>
+                    </div>
+                    <div class="day-item">
+                        <div class="day-name">二</div>
+                        <div class="day-circle">2</div>
+                    </div>
+                    <div class="day-item">
+                        <div class="day-name">三</div>
+                        <div class="day-circle today">3</div>
+                    </div>
+                    <div class="day-item">
+                        <div class="day-name">四</div>
+                        <div class="day-circle">4</div>
+                    </div>
+                    <div class="day-item">
+                        <div class="day-name">五</div>
+                        <div class="day-circle">5</div>
+                    </div>
+                    <div class="day-item">
+                        <div class="day-name">六</div>
+                        <div class="day-circle">6</div>
+                    </div>
+                    <div class="day-item">
+                        <div class="day-name">日</div>
+                        <div class="day-circle">7</div>
+                    </div>
+                </div>
+                
+                <div class="habit-actions">
+                    <button class="habit-button">跳过</button>
+                    <button class="habit-button primary">完成</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="habit-section">
+            <div class="section-header">其他习惯</div>
+            
+            <!-- Meditation Habit -->
+            <div class="habit-card fade-in">
+                <div class="habit-header">
+                    <div class="habit-icon" style="background-color: #AF52DE;">
+                        <i class="fas fa-spa"></i>
+                    </div>
+                    <div class="habit-info">
+                        <div class="habit-name">冥想</div>
+                        <div class="habit-streak">已坚持 <span>7</span> 天</div>
+                    </div>
+                </div>
+                
+                <div class="habit-progress">
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 70%; background-color: #AF52DE;"></div>
+                    </div>
+                    <div class="progress-percent">70%</div>
+                </div>
+            </div>
+            
+            <!-- Journal Habit -->
+            <div class="habit-card fade-in">
+                <div class="habit-header">
+                    <div class="habit-icon" style="background-color: #34C759;">
+                        <i class="fas fa-pencil-alt"></i>
+                    </div>
+                    <div class="habit-info">
+                        <div class="habit-name">日记</div>
+                        <div class="habit-streak">已坚持 <span>21</span> 天</div>
+                    </div>
+                </div>
+                
+                <div class="habit-progress">
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 90%; background-color: #34C759;"></div>
+                    </div>
+                    <div class="progress-percent">90%</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Add Habit Modal -->
+    <div class="overlay" id="overlay"></div>
+    <div class="modal" id="addHabitModal">
+        <div class="modal-header">
+            <div class="modal-title">新建习惯</div>
+            <button class="close-button" id="closeModalButton">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label">习惯名称</label>
+            <input type="text" class="form-input" placeholder="例如: 阅读, 锻炼...">
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label">图标颜色</label>
+            <div class="color-options">
+                <div class="color-option selected" style="background-color: #007AFF;"></div>
+                <div class="color-option" style="background-color: #5AC8FA;"></div>
+                <div class="color-option" style="background-color: #34C759;"></div>
+                <div class="color-option" style="background-color: #FF9500;"></div>
+                <div class="color-option" style="background-color: #FF3B30;"></div>
+                <div class="color-option" style="background-color: #AF52DE;"></div>
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label">图标</label>
+            <div class="color-options">
+                <div class="habit-icon selected" style="background-color: #007AFF;">
+                    <i class="fas fa-book"></i>
+                </div>
+                <div class="habit-icon" style="background-color: #007AFF;">
+                    <i class="fas fa-running"></i>
+                </div>
+                <div class="habit-icon" style="background-color: #007AFF;">
+                    <i class="fas fa-spa"></i>
+                </div>
+                <div class="habit-icon" style="background-color: #007AFF;">
+                    <i class="fas fa-pencil-alt"></i>
+                </div>
+                <div class="habit-icon" style="background-color: #007AFF;">
+                    <i class="fas fa-apple-alt"></i>
+                </div>
+            </div>
+        </div>
+        
+        <button class="form-button">创建习惯</button>
+    </div>
+    
+    <!-- Tab Bar -->
+    <div class="tab-bar">
+        <a href="tasks.html" class="tab-item">
+            <div class="tab-icon"><i class="fas fa-tasks"></i></div>
+            <div>任务</div>
+        </a>
+        <a href="habits.html" class="tab-item active">
+            <div class="tab-icon"><i class="fas fa-calendar-check"></i></div>
+            <div>习惯</div>
+        </a>
+        <a href="ai-assistant.html" class="tab-item">
+            <div class="tab-icon"><i class="fas fa-robot"></i></div>
+            <div>AI秘书</div>
+        </a>
+        <a href="calendar.html" class="tab-item">
+            <div class="tab-icon"><i class="fas fa-calendar"></i></div>
+            <div>日历</div>
+        </a>
+        <a href="stats.html" class="tab-item">
+            <div class="tab-icon"><i class="fas fa-chart-pie"></i></div>
+            <div>统计</div>
+        </a>
+    </div>
+    
+    <script>
+        // Modal functionality
+        const addHabitButton = document.getElementById('addHabitButton');
+        const addHabitModal = document.getElementById('addHabitModal');
+        const overlay = document.getElementById('overlay');
+        const closeModalButton = document.getElementById('closeModalButton');
+        
+        // Open modal
+        addHabitButton.addEventListener('click', () => {
+            addHabitModal.classList.add('active');
+            overlay.classList.add('active');
+        });
+        
+        // Close modal
+        function closeModal() {
+            addHabitModal.classList.remove('active');
+            overlay.classList.remove('active');
+        }
+        
+        closeModalButton.addEventListener('click', closeModal);
+        overlay.addEventListener('click', closeModal);
+        
+        // Handle color selection
+        document.querySelectorAll('.color-option').forEach(option => {
+            option.addEventListener('click', () => {
+                document.querySelectorAll('.color-option').forEach(o => o.classList.remove('selected'));
+                option.classList.add('selected');
+                
+                // Update icon colors
+                const color = window.getComputedStyle(option).backgroundColor;
+                document.querySelectorAll('.habit-icon').forEach(icon => {
+                    icon.style.backgroundColor = color;
+                });
+            });
+        });
+        
+        // Handle icon selection
+        document.querySelectorAll('.habit-icon').forEach(icon => {
+            icon.addEventListener('click', () => {
+                document.querySelectorAll('.habit-icon').forEach(i => i.classList.remove('selected'));
+                icon.classList.add('selected');
+            });
+        });
+        
+        // Handle habit actions
+        document.querySelectorAll('.habit-button.primary').forEach(button => {
+            button.addEventListener('click', function() {
+                const card = this.closest('.habit-card');
+                const todayCircle = card.querySelector('.day-circle.today');
+                
+                if (!todayCircle.classList.contains('completed')) {
+                    todayCircle.classList.add('completed');
+                    todayCircle.innerHTML = '<i class="fas fa-check"></i>';
+                    
+                    // Disable buttons
+                    this.disabled = true;
+                    this.previousElementSibling.disabled = true;
+                    
+                    // Change style
+                    this.innerHTML = '已完成';
+                    this.style.backgroundColor = 'var(--app-success)';
+                }
+            });
+        });
+        
+        // Make buttons respond to clicks with scale animation
+        document.querySelectorAll('button, .tab-item, .color-option, .habit-icon').forEach(button => {
+            button.addEventListener('touchstart', () => {
+                button.classList.add('btn-active');
+            });
+            
+            button.addEventListener('touchend', () => {
+                setTimeout(() => {
+                    button.classList.remove('btn-active');
+                }, 200);
+            });
+            
+            // For desktop testing
+            button.addEventListener('mousedown', () => {
+                button.classList.add('btn-active');
+            });
+            
+            button.addEventListener('mouseup', () => {
+                setTimeout(() => {
+                    button.classList.remove('btn-active');
+                }, 200);
+            });
+        });
+    </script>
+</body>
+</html> 

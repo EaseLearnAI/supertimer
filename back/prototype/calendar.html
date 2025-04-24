@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>日历</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --app-primary: #007AFF;
+            --app-secondary: #5AC8FA;
+            --app-success: #34C759;
+            --app-danger: #FF3B30;
+            --app-warning: #FF9500;
+            --app-info: #5AC8FA;
+            --app-light: #F2F2F7;
+            --app-dark: #1C1C1E;
+            --app-gray: #8E8E93;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: #F2F2F7;
+            color: #1C1C1E;
+            max-width: 430px;
+            margin: 0 auto;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            font-size: 16px;
+            line-height: 1.5;
+        }
+        
+        /* Status Bar */
+        .status-bar {
+            height: 44px;
+            background-color: #F2F2F7;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 16px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        
+        /* Tab Bar */
+        .tab-bar {
+            height: 83px;
+            background-color: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(10px);
+            border-top: 1px solid rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            padding-bottom: 20px; /* For home bar */
+        }
+        
+        .tab-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: var(--app-gray);
+            font-size: 10px;
+            cursor: pointer;
+            transition: color 0.2s ease;
+        }
+        
+        .tab-item.active {
+            color: var(--app-primary);
+        }
+        
+        .tab-icon {
+            font-size: 24px;
+            margin-bottom: 4px;
+        }
+        
+        /* Content area */
+        .content-area {
+            flex: 1;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        
+        /* iOS style header */
+        .ios-header {
+            height: 44px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            font-weight: 600;
+            font-size: 17px;
+            background-color: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+        }
+        
+        .ios-header-action {
+            position: absolute;
+            font-size: 17px;
+        }
+        
+        .ios-header-left {
+            left: 16px;
+        }
+        
+        .ios-header-right {
+            right: 16px;
+        }
+        
+        /* Animation classes */
+        .btn-active {
+            transform: scale(0.95);
+            transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.3s ease forwards;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        .slide-up {
+            animation: slideUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+        
+        @keyframes slideUp {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
+        
+        /* Calendar specific styles */
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px;
+            font-weight: 600;
+            font-size: 20px;
+        }
+        
+        .calendar-nav {
+            color: var(--app-primary);
+            cursor: pointer;
+            padding: 8px;
+            transition: all 0.2s ease;
+        }
+        
+        .calendar-nav:active {
+            transform: scale(0.9);
+        }
+        
+        .calendar-weekdays {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            text-align: center;
+            font-size: 12px;
+            color: var(--app-gray);
+            font-weight: 600;
+            padding: 8px 16px;
+        }
+        
+        .calendar-days {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            padding: 0 16px 16px;
+            gap: 8px;
+        }
+        
+        .calendar-day {
+            aspect-ratio: 1/1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            font-size: 17px;
+            border-radius: 50%;
+            position: relative;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        
+        .calendar-day:active {
+            transform: scale(0.9);
+        }
+        
+        .calendar-day.today {
+            background-color: var(--app-primary);
+            color: white;
+        }
+        
+        .calendar-day.has-tasks::after {
+            content: '';
+            position: absolute;
+            bottom: 4px;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background-color: var(--app-primary);
+        }
+        
+        .calendar-day.today.has-tasks::after {
+            background-color: white;
+        }
+        
+        .calendar-day.selected {
+            background-color: rgba(0, 122, 255, 0.1);
+            border: 1px solid var(--app-primary);
+        }
+        
+        .calendar-day.other-month {
+            color: var(--app-gray);
+            opacity: 0.5;
+        }
+        
+        /* Task panel */
+        .task-panel {
+            background-color: white;
+            border-radius: 16px 16px 0 0;
+            margin-top: 16px;
+            padding: 20px 16px;
+            flex: 1;
+            overflow-y: auto;
+        }
+        
+        .task-panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        
+        .task-panel-title {
+            font-weight: 600;
+            font-size: 18px;
+        }
+        
+        .task-count {
+            font-size: 14px;
+            color: var(--app-gray);
+        }
+        
+        .task-list-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--app-light);
+            animation: fadeIn 0.3s ease forwards;
+            animation-delay: calc(var(--index) * 0.1s);
+            opacity: 0;
+        }
+        
+        .task-list-item:last-child {
+            border-bottom: none;
+        }
+        
+        .task-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 12px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-right: 12px;
+            color: white;
+            font-size: 16px;
+        }
+        
+        .task-details {
+            flex: 1;
+        }
+        
+        .task-name {
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        
+        .task-time {
+            font-size: 14px;
+            color: var(--app-gray);
+        }
+        
+        .no-tasks {
+            text-align: center;
+            padding: 32px 0;
+            color: var(--app-gray);
+            font-size: 16px;
+            animation: fadeIn 0.5s ease forwards;
+        }
+        
+        /* Responsive adjustments */
+        @media (min-width: 768px) {
+            body {
+                max-width: 500px;
+            }
+        }
+        
+        @media (min-width: 1024px) {
+            body {
+                max-width: 600px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Status Bar -->
+    <div class="status-bar">
+        <div>9:41</div>
+        <div class="flex items-center space-x-2">
+            <i class="fas fa-signal"></i>
+            <i class="fas fa-wifi"></i>
+            <i class="fas fa-battery-full"></i>
+        </div>
+    </div>
+    
+    <!-- Header -->
+    <div class="ios-header">
+        <div class="ios-header-title">日历</div>
+    </div>
+    
+    <!-- Content Area -->
+    <div class="content-area">
+        <!-- Calendar Header -->
+        <div class="calendar-header">
+            <div class="calendar-nav prev-month">
+                <i class="fas fa-chevron-left"></i>
+            </div>
+            <div class="current-month">2023年6月</div>
+            <div class="calendar-nav next-month">
+                <i class="fas fa-chevron-right"></i>
+            </div>
+        </div>
+        
+        <!-- Calendar Weekdays -->
+        <div class="calendar-weekdays">
+            <div>日</div>
+            <div>一</div>
+            <div>二</div>
+            <div>三</div>
+            <div>四</div>
+            <div>五</div>
+            <div>六</div>
+        </div>
+        
+        <!-- Calendar Days -->
+        <div class="calendar-days" id="calendarDays">
+            <!-- Days will be generated by JS -->
+        </div>
+        
+        <!-- Task Panel -->
+        <div class="task-panel">
+            <div class="task-panel-header">
+                <div class="task-panel-title" id="selectedDateTitle">2023年6月1日</div>
+                <div class="task-count" id="taskCount">3项已完成</div>
+            </div>
+            
+            <div class="task-list" id="taskList">
+                <div class="task-list-item" style="--index: 0">
+                    <div class="task-icon" style="background-color: #FF9500;">
+                        <i class="fas fa-running"></i>
+                    </div>
+                    <div class="task-details">
+                        <div class="task-name">早晨锻炼</div>
+                        <div class="task-time">07:00 - 08:00</div>
+                    </div>
+                </div>
+                
+                <div class="task-list-item" style="--index: 1">
+                    <div class="task-icon" style="background-color: #007AFF;">
+                        <i class="fas fa-briefcase"></i>
+                    </div>
+                    <div class="task-details">
+                        <div class="task-name">项目会议</div>
+                        <div class="task-time">10:00 - 11:30</div>
+                    </div>
+                </div>
+                
+                <div class="task-list-item" style="--index: 2">
+                    <div class="task-icon" style="background-color: #5AC8FA;">
+                        <i class="fas fa-book"></i>
+                    </div>
+                    <div class="task-details">
+                        <div class="task-name">阅读时间</div>
+                        <div class="task-time">19:00 - 20:00</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- No tasks view (hidden by default) -->
+            <div class="no-tasks hidden" id="noTasks">
+                <i class="fas fa-calendar-day text-4xl mb-4 text-gray-300"></i>
+                <div>今天没有完成的任务</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Tab Bar -->
+    <div class="tab-bar">
+        <a href="tasks.html" class="tab-item">
+            <div class="tab-icon"><i class="fas fa-tasks"></i></div>
+            <div>任务</div>
+        </a>
+        <a href="habits.html" class="tab-item">
+            <div class="tab-icon"><i class="fas fa-calendar-check"></i></div>
+            <div>习惯</div>
+        </a>
+        <a href="ai-assistant.html" class="tab-item">
+            <div class="tab-icon"><i class="fas fa-robot"></i></div>
+            <div>AI秘书</div>
+        </a>
+        <a href="calendar.html" class="tab-item active">
+            <div class="tab-icon"><i class="fas fa-calendar"></i></div>
+            <div>日历</div>
+        </a>
+        <a href="stats.html" class="tab-item">
+            <div class="tab-icon"><i class="fas fa-chart-pie"></i></div>
+            <div>统计</div>
+        </a>
+    </div>
+    
+    <script>
+        // Generate calendar days for current month
+        function generateCalendar() {
+            const calendarDays = document.getElementById('calendarDays');
+            calendarDays.innerHTML = '';
+            
+            // Sample data for June 2023
+            const firstDay = 4; // Thursday (0 is Sunday)
+            const daysInMonth = 30;
+            const today = 1; // Assuming today is June 1st
+            
+            // Add days from previous month
+            for (let i = 0; i < firstDay; i++) {
+                const dayElement = document.createElement('div');
+                dayElement.className = 'calendar-day other-month fade-in';
+                dayElement.textContent = 31 - firstDay + i + 1; // May 2023 has 31 days
+                dayElement.style.animationDelay = `${i * 0.02}s`;
+                calendarDays.appendChild(dayElement);
+            }
+            
+            // Add days for current month
+            for (let i = 1; i <= daysInMonth; i++) {
+                const dayElement = document.createElement('div');
+                dayElement.className = 'calendar-day fade-in';
+                dayElement.textContent = i;
+                dayElement.style.animationDelay = `${(i + firstDay) * 0.02}s`;
+                
+                // Mark today
+                if (i === today) {
+                    dayElement.classList.add('today');
+                }
+                
+                // Mark days with tasks (for demo)
+                if (i === 1 || i === 5 || i === 10 || i === 15 || i === 20 || i === 25) {
+                    dayElement.classList.add('has-tasks');
+                }
+                
+                // Add click event to select day
+                dayElement.addEventListener('click', function() {
+                    selectDay(i);
+                });
+                
+                calendarDays.appendChild(dayElement);
+            }
+            
+            // Add days from next month to fill the grid
+            const remainingCells = 42 - (firstDay + daysInMonth); // 6 rows of 7 days = 42 cells total
+            for (let i = 1; i <= remainingCells; i++) {
+                const dayElement = document.createElement('div');
+                dayElement.className = 'calendar-day other-month fade-in';
+                dayElement.textContent = i;
+                dayElement.style.animationDelay = `${(i + firstDay + daysInMonth) * 0.02}s`;
+                calendarDays.appendChild(dayElement);
+            }
+            
+            // Select today by default
+            selectDay(today);
+        }
+        
+        // Select a day and show its tasks
+        function selectDay(day) {
+            // Remove selection from all days
+            document.querySelectorAll('.calendar-day').forEach(el => {
+                if (!el.classList.contains('other-month')) {
+                    el.classList.remove('selected');
+                }
+            });
+            
+            // Add selection to clicked day
+            const dayElements = document.querySelectorAll('.calendar-day:not(.other-month)');
+            dayElements[day - 1].classList.add('selected');
+            
+            // Update task panel title
+            document.getElementById('selectedDateTitle').textContent = `2023年6月${day}日`;
+            
+            // Update tasks (for demo, just show or hide based on predefined days)
+            const hasTasks = [1, 5, 10, 15, 20, 25].includes(day);
+            
+            // Reset animation delays for tasks
+            const taskItems = document.querySelectorAll('.task-list-item');
+            taskItems.forEach((item, index) => {
+                item.style.setProperty('--index', index);
+                item.style.opacity = 0;
+                void item.offsetWidth; // Force reflow to restart animation
+                item.style.opacity = ''; // Reset to use the CSS animation
+            });
+            
+            document.getElementById('taskList').style.display = hasTasks ? 'block' : 'none';
+            document.getElementById('noTasks').style.display = hasTasks ? 'none' : 'block';
+            document.getElementById('taskCount').textContent = hasTasks ? '3项已完成' : '0项已完成';
+            
+            // If this day has tasks, animate them in
+            if (hasTasks) {
+                // Animation is handled by CSS with staggered delays
+            }
+        }
+        
+        // Initialize calendar on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            generateCalendar();
+            
+            // Month navigation (just for demo, doesn't actually change the month)
+            document.querySelector('.prev-month').addEventListener('click', function() {
+                const currentMonth = document.querySelector('.current-month');
+                currentMonth.textContent = '2023年5月';
+                setTimeout(() => {
+                    currentMonth.textContent = '2023年6月';
+                }, 1000);
+            });
+            
+            document.querySelector('.next-month').addEventListener('click', function() {
+                const currentMonth = document.querySelector('.current-month');
+                currentMonth.textContent = '2023年7月';
+                setTimeout(() => {
+                    currentMonth.textContent = '2023年6月';
+                }, 1000);
+            });
+        });
+        
+        // Make buttons respond to clicks with scale animation
+        document.querySelectorAll('button, .calendar-nav, .calendar-day, .tab-item').forEach(button => {
+            button.addEventListener('touchstart', () => {
+                button.classList.add('btn-active');
+            });
+            
+            button.addEventListener('touchend', () => {
+                setTimeout(() => {
+                    button.classList.remove('btn-active');
+                }, 200);
+            });
+            
+            // For desktop testing
+            button.addEventListener('mousedown', () => {
+                button.classList.add('btn-active');
+            });
+            
+            button.addEventListener('mouseup', () => {
+                setTimeout(() => {
+                    button.classList.remove('btn-active');
+                }, 200);
+            });
+        });
+    </script>
+</body>
+</html> 

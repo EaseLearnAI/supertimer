@@ -1,22 +1,21 @@
-import { ArrowUpRight, InfoIcon } from "lucide-react";
+import { InfoIcon } from "lucide-react";
 import Link from "next/link";
 
 export function SmtpMessage() {
   return (
-    <div className="bg-muted/50 px-5 py-3 border rounded-md flex gap-4">
-      <InfoIcon size={16} className="mt-0.5" />
-      <div className="flex flex-col gap-1">
-        <small className="text-sm text-secondary-foreground">
-          <strong> Note:</strong> Emails are rate limited. Enable Custom SMTP to
-          increase the rate limit.
-        </small>
-        <div>
+    <div className="bg-[#F2F2F7] p-4 rounded-xl text-sm">
+      <div className="flex gap-3">
+        <InfoIcon size={18} className="text-[#8E8E93] flex-shrink-0 mt-0.5" />
+        <div className="flex flex-col gap-2">
+          <p className="text-[#1C1C1E]">
+            <strong>注意:</strong> 默认邮件发送有速率限制。如需提高发送限制，请配置自定义SMTP服务。
+          </p>
           <Link
             href="https://supabase.com/docs/guides/auth/auth-smtp"
             target="_blank"
-            className="text-primary/50 hover:text-primary flex items-center text-sm gap-1"
+            className="text-[#007AFF] flex items-center gap-1"
           >
-            Learn more <ArrowUpRight size={14} />
+            了解更多 <i className="fas fa-external-link-alt text-xs"></i>
           </Link>
         </div>
       </div>

@@ -1,168 +1,245 @@
--- 创建扩展
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-
--- 用户个人资料表
-CREATE TABLE public.profiles (
-    id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-    email TEXT NOT NULL,
-    name TEXT,
-    avatar_url TEXT,
-    voice_settings JSONB DEFAULT '{}',
-    voice_id TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+-- 用户表
+CREATE TABLE public.users (
+  id UUID REFERENCES auth.users ON DELETE CASCADE NOT NULL PRIMARY KEY,
+  email TEXT UNIQUE NOT NULL,
+  display_name TEXT,
+  avatar_url TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+  updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
 );
 
--- 任务集表
-CREATE TABLE public.task_sets (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-    name TEXT NOT NULL,
-    color TEXT NOT NULL DEFAULT '#007AFF',
-    position INTEGER NOT NULL DEFAULT 0,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+-- 任务集合表
+CREATE TABLE public.task_groups (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
+  name TEXT NOT NULL,
+  icon TEXT NOT NULL,
+  icon_color TEXT NOT NULL,
+  is_open BOOLEAN DEFAULT true,
+  created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+  updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
 );
 
 -- 任务表
 CREATE TABLE public.tasks (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-    task_set_id UUID REFERENCES public.task_sets(id) ON DELETE SET NULL,
-    title TEXT NOT NULL,
-    description TEXT,
-    priority TEXT CHECK (priority IN ('low', 'medium', 'high')) DEFAULT 'medium',
-    is_urgent BOOLEAN DEFAULT false,
-    is_important BOOLEAN DEFAULT false,
-    due_date TIMESTAMP WITH TIME ZONE,
-    is_completed BOOLEAN DEFAULT false,
-    completed_at TIMESTAMP WITH TIME ZONE,
-    pomodoro_count INTEGER DEFAULT 0,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
+  group_id UUID REFERENCES public.task_groups(id) ON DELETE CASCADE,
+  quadrant SMALLINT CHECK (quadrant >= 1 AND quadrant <= 4),
+  content TEXT NOT NULL,
+  completed BOOLEAN DEFAULT false,
+  priority TEXT,
+  due_date TIMESTAMPTZ,
+  location TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+  updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
 );
 
 -- 习惯表
 CREATE TABLE public.habits (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-    name TEXT NOT NULL,
-    icon TEXT,
-    color TEXT NOT NULL DEFAULT '#34C759',
-    frequency TEXT CHECK (frequency IN ('daily', 'weekly', 'monthly')) DEFAULT 'daily',
-    weekdays INTEGER[] DEFAULT '{1,2,3,4,5,6,7}',
-    start_date DATE NOT NULL DEFAULT CURRENT_DATE,
-    streak_current INTEGER DEFAULT 0,
-    streak_longest INTEGER DEFAULT 0,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
+  name TEXT NOT NULL,
+  icon TEXT NOT NULL,
+  color TEXT NOT NULL,
+  streak INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+  updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
 );
 
--- 习惯打卡记录表
+-- 习惯完成记录表
 CREATE TABLE public.habit_logs (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    habit_id UUID NOT NULL REFERENCES public.habits(id) ON DELETE CASCADE,
-    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-    log_date DATE NOT NULL DEFAULT CURRENT_DATE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
-    UNIQUE (habit_id, log_date)
-);
-
--- 专注会话表
-CREATE TABLE public.focus_sessions (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-    task_id UUID REFERENCES public.tasks(id) ON DELETE SET NULL,
-    duration INTEGER NOT NULL, -- 以分钟为单位
-    start_time TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
-    end_time TIMESTAMP WITH TIME ZONE,
-    is_completed BOOLEAN DEFAULT false,
-    notes TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  habit_id UUID REFERENCES public.habits(id) ON DELETE CASCADE NOT NULL,
+  user_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
+  completed_at DATE NOT NULL,
+  skipped BOOLEAN DEFAULT false,
+  created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
 );
 
 -- 日历事件表
 CREATE TABLE public.calendar_events (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-    related_task_id UUID REFERENCES public.tasks(id) ON DELETE SET NULL,
-    title TEXT NOT NULL,
-    location TEXT,
-    start_time TIMESTAMP WITH TIME ZONE NOT NULL,
-    end_time TIMESTAMP WITH TIME ZONE NOT NULL,
-    description TEXT,
-    is_all_day BOOLEAN DEFAULT false,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
+  title TEXT NOT NULL,
+  start_time TIMESTAMPTZ NOT NULL,
+  end_time TIMESTAMPTZ NOT NULL,
+  location TEXT,
+  description TEXT,
+  icon TEXT,
+  color TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+  updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
 );
 
--- AI对话历史表
-CREATE TABLE public.ai_conversations (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-    user_message TEXT NOT NULL,
-    ai_response TEXT NOT NULL,
-    parsed_entities JSONB DEFAULT '{}',
-    audio_url TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+-- 番茄钟记录表
+CREATE TABLE public.pomodoro_sessions (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
+  task_id UUID REFERENCES public.tasks(id) ON DELETE SET NULL,
+  duration INTEGER NOT NULL, -- 以分钟为单位
+  completed BOOLEAN DEFAULT false,
+  start_time TIMESTAMPTZ NOT NULL,
+  end_time TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
 );
 
 -- 统计数据表
 CREATE TABLE public.statistics (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-    date DATE NOT NULL DEFAULT CURRENT_DATE,
-    tasks_completed INTEGER DEFAULT 0,
-    habits_completed INTEGER DEFAULT 0,
-    focus_minutes INTEGER DEFAULT 0,
-    daily_data JSONB DEFAULT '{}',
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
-    UNIQUE (user_id, date)
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
+  date DATE NOT NULL,
+  completed_tasks INTEGER DEFAULT 0,
+  completed_habits INTEGER DEFAULT 0,
+  focus_minutes INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+  updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+  UNIQUE(user_id, date)
 );
 
--- 用户画像表 (用于AI个性化)
-CREATE TABLE public.user_profiles (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-    personality_traits JSONB DEFAULT '{}',
-    preferences JSONB DEFAULT '{}',
-    behavior_patterns JSONB DEFAULT '{}',
-    achievement_history JSONB DEFAULT '{}',
-    last_updated TIMESTAMP WITH TIME ZONE DEFAULT now(),
-    UNIQUE (user_id)
+-- AI助手设置表
+CREATE TABLE public.ai_settings (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL UNIQUE,
+  access_calendar BOOLEAN DEFAULT true,
+  access_tasks BOOLEAN DEFAULT true,
+  auto_voice_reply BOOLEAN DEFAULT false,
+  created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+  updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
 );
 
--- 旅行计划表 (用于AI旅行规划功能)
-CREATE TABLE public.travel_plans (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-    destination TEXT NOT NULL,
-    duration INTEGER NOT NULL,
-    user_preferences TEXT,
-    plan_content TEXT NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
-);
+-- 添加触发器自动更新updated_at字段
+CREATE OR REPLACE FUNCTION update_modified_column()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
 
--- 创建索引以提高查询性能
-CREATE INDEX idx_tasks_user_id ON public.tasks(user_id);
-CREATE INDEX idx_tasks_task_set_id ON public.tasks(task_set_id);
-CREATE INDEX idx_tasks_due_date ON public.tasks(due_date);
-CREATE INDEX idx_tasks_is_completed ON public.tasks(is_completed);
+-- 为所有表格添加触发器
+CREATE TRIGGER update_users_modtime BEFORE UPDATE ON users FOR EACH ROW EXECUTE PROCEDURE update_modified_column();
+CREATE TRIGGER update_task_groups_modtime BEFORE UPDATE ON task_groups FOR EACH ROW EXECUTE PROCEDURE update_modified_column();
+CREATE TRIGGER update_tasks_modtime BEFORE UPDATE ON tasks FOR EACH ROW EXECUTE PROCEDURE update_modified_column();
+CREATE TRIGGER update_habits_modtime BEFORE UPDATE ON habits FOR EACH ROW EXECUTE PROCEDURE update_modified_column();
+CREATE TRIGGER update_calendar_events_modtime BEFORE UPDATE ON calendar_events FOR EACH ROW EXECUTE PROCEDURE update_modified_column();
+CREATE TRIGGER update_statistics_modtime BEFORE UPDATE ON statistics FOR EACH ROW EXECUTE PROCEDURE update_modified_column();
+CREATE TRIGGER update_ai_settings_modtime BEFORE UPDATE ON ai_settings FOR EACH ROW EXECUTE PROCEDURE update_modified_column();
 
-CREATE INDEX idx_habits_user_id ON public.habits(user_id);
-CREATE INDEX idx_habit_logs_habit_id ON public.habit_logs(habit_id);
-CREATE INDEX idx_habit_logs_user_id ON public.habit_logs(user_id);
-CREATE INDEX idx_habit_logs_log_date ON public.habit_logs(log_date);
+-- RLS策略设置
 
-CREATE INDEX idx_focus_sessions_user_id ON public.focus_sessions(user_id);
-CREATE INDEX idx_focus_sessions_task_id ON public.focus_sessions(task_id);
-CREATE INDEX idx_focus_sessions_start_time ON public.focus_sessions(start_time);
+-- 启用所有表的RLS
+ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.task_groups ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.tasks ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.habits ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.habit_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.calendar_events ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.pomodoro_sessions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.statistics ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.ai_settings ENABLE ROW LEVEL SECURITY;
 
-CREATE INDEX idx_calendar_events_user_id ON public.calendar_events(user_id);
-CREATE INDEX idx_calendar_events_start_time ON public.calendar_events(start_time);
-CREATE INDEX idx_calendar_events_end_time ON public.calendar_events(end_time);
+-- 用户表策略
+CREATE POLICY "用户只能查看自己的信息" ON public.users
+  FOR SELECT USING (auth.uid() = id);
+  
+CREATE POLICY "用户只能更新自己的信息" ON public.users
+  FOR UPDATE USING (auth.uid() = id);
 
-CREATE INDEX idx_ai_conversations_user_id ON public.ai_conversations(user_id);
-CREATE INDEX idx_statistics_user_id_date ON public.statistics(user_id, date);
+-- 任务集合表策略
+CREATE POLICY "用户只能查看自己的任务集合" ON public.task_groups
+  FOR SELECT USING (auth.uid() = user_id);
+  
+CREATE POLICY "用户只能插入自己的任务集合" ON public.task_groups
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
+  
+CREATE POLICY "用户只能更新自己的任务集合" ON public.task_groups
+  FOR UPDATE USING (auth.uid() = user_id);
+  
+CREATE POLICY "用户只能删除自己的任务集合" ON public.task_groups
+  FOR DELETE USING (auth.uid() = user_id);
+
+-- 任务表策略
+CREATE POLICY "用户只能查看自己的任务" ON public.tasks
+  FOR SELECT USING (auth.uid() = user_id);
+  
+CREATE POLICY "用户只能插入自己的任务" ON public.tasks
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
+  
+CREATE POLICY "用户只能更新自己的任务" ON public.tasks
+  FOR UPDATE USING (auth.uid() = user_id);
+  
+CREATE POLICY "用户只能删除自己的任务" ON public.tasks
+  FOR DELETE USING (auth.uid() = user_id);
+
+-- 习惯表策略
+CREATE POLICY "用户只能查看自己的习惯" ON public.habits
+  FOR SELECT USING (auth.uid() = user_id);
+  
+CREATE POLICY "用户只能插入自己的习惯" ON public.habits
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
+  
+CREATE POLICY "用户只能更新自己的习惯" ON public.habits
+  FOR UPDATE USING (auth.uid() = user_id);
+  
+CREATE POLICY "用户只能删除自己的习惯" ON public.habits
+  FOR DELETE USING (auth.uid() = user_id);
+
+-- 习惯记录表策略
+CREATE POLICY "用户只能查看自己的习惯记录" ON public.habit_logs
+  FOR SELECT USING (auth.uid() = user_id);
+  
+CREATE POLICY "用户只能插入自己的习惯记录" ON public.habit_logs
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
+  
+CREATE POLICY "用户只能更新自己的习惯记录" ON public.habit_logs
+  FOR UPDATE USING (auth.uid() = user_id);
+  
+CREATE POLICY "用户只能删除自己的习惯记录" ON public.habit_logs
+  FOR DELETE USING (auth.uid() = user_id);
+
+-- 日历事件表策略
+CREATE POLICY "用户只能查看自己的日历事件" ON public.calendar_events
+  FOR SELECT USING (auth.uid() = user_id);
+  
+CREATE POLICY "用户只能插入自己的日历事件" ON public.calendar_events
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
+  
+CREATE POLICY "用户只能更新自己的日历事件" ON public.calendar_events
+  FOR UPDATE USING (auth.uid() = user_id);
+  
+CREATE POLICY "用户只能删除自己的日历事件" ON public.calendar_events
+  FOR DELETE USING (auth.uid() = user_id);
+
+-- 番茄钟记录表策略
+CREATE POLICY "用户只能查看自己的番茄钟记录" ON public.pomodoro_sessions
+  FOR SELECT USING (auth.uid() = user_id);
+  
+CREATE POLICY "用户只能插入自己的番茄钟记录" ON public.pomodoro_sessions
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
+  
+CREATE POLICY "用户只能更新自己的番茄钟记录" ON public.pomodoro_sessions
+  FOR UPDATE USING (auth.uid() = user_id);
+  
+CREATE POLICY "用户只能删除自己的番茄钟记录" ON public.pomodoro_sessions
+  FOR DELETE USING (auth.uid() = user_id);
+
+-- 统计数据表策略
+CREATE POLICY "用户只能查看自己的统计数据" ON public.statistics
+  FOR SELECT USING (auth.uid() = user_id);
+  
+CREATE POLICY "用户只能插入自己的统计数据" ON public.statistics
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
+  
+CREATE POLICY "用户只能更新自己的统计数据" ON public.statistics
+  FOR UPDATE USING (auth.uid() = user_id);
+
+-- AI助手设置表策略
+CREATE POLICY "用户只能查看自己的AI助手设置" ON public.ai_settings
+  FOR SELECT USING (auth.uid() = user_id);
+  
+CREATE POLICY "用户只能插入自己的AI助手设置" ON public.ai_settings
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
+  
+CREATE POLICY "用户只能更新自己的AI助手设置" ON public.ai_settings
+  FOR UPDATE USING (auth.uid() = user_id);
